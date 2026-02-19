@@ -29,9 +29,17 @@ const HorizontalTree = ({ data, visibleNodes, setVisibleNodes }) => {
     }
   };
 
-  const renderTree = (items, level = 0) =>
-    items.map((item) => (
-      <div key={item.id} className="relative">
+ const renderTree = (items, level = 0) => {
+  if (!items) return null;
+
+  // ✅ If single object passed, wrap into array
+  const safeItems = Array.isArray(items) ? items : [items];
+
+  return safeItems.map((item) => {
+    const id = item.id || item.name; // fallback since id may not exist
+
+    return (
+      <div key={id} className="relative">
 
         {/* Row */}
         <div
@@ -40,15 +48,15 @@ const HorizontalTree = ({ data, visibleNodes, setVisibleNodes }) => {
         >
           <input
             type="checkbox"
-            checked={visibleNodes[item.id] || false}
-            onChange={() => toggleNode(item.id)}
+            checked={visibleNodes[id] || false}
+            onChange={() => toggleNode(id)}
             className="accent-blue-600"
           />
 
           {getIcon(item.type)}
 
           <span className="text-sm text-gray-700 font-medium">
-            {item.label}
+            {item.label || item.name}
           </span>
 
           <span className="text-xs text-gray-400 ml-auto uppercase">
@@ -57,13 +65,16 @@ const HorizontalTree = ({ data, visibleNodes, setVisibleNodes }) => {
         </div>
 
         {/* Children */}
-        {item.children && (
+        {Array.isArray(item.children) && item.children.length > 0 && (
           <div className="border-l border-gray-200 ml-3">
             {renderTree(item.children, level + 1)}
           </div>
         )}
       </div>
-    ));
+    );
+  });
+};
+
 
   return (
     <div className="text-sm">

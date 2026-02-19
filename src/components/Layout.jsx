@@ -3,226 +3,117 @@ import Sidebar from "./common/Sidebar.jsx";
 import Header from "./common/Header.jsx";
 import GraphCanvas from "../pages/GraphCanvas.jsx";
 
-// DATA.
- const initialRepoData = [
-  {
-    id: "folder-src",
-    label: "src",
-    type: "folder",
-    children: [
+// INITIAL DATA
+const initialRepoData = {
+  name: "repo",
+  type: "folder",
+  children: [
+    {
+      name: ".gitignore",
+      type: "file",
+      children: [],
+    },
+    {
+      name: "Agent-Workflows",
+      type: "folder",
+      children: [
+        {
+          name: "Agent_Workflows.ipynb",
+          type: "file",
+          children: [],
+        },
+      ],
+    },
+  ],
+};
 
-      // ------------------ Controllers ------------------
-      {
-        id: "folder-controllers",
-        label: "controllers",
-        type: "folder",
-        children: [
-          {
-            id: "file-user-controller",
-            label: "user_controller.py",
-            type: "file",
-            children: [
-              {
-                id: "class-user-controller",
-                label: "UserController",
-                type: "class",
-                children: [
-                  {
-                    id: "func-create-user",
-                    label: "create_user()",
-                    type: "function",
-                  },
-                  {
-                    id: "func-delete-user",
-                    label: "delete_user()",
-                    type: "function",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-
-      // ------------------ Services ------------------
-      {
-        id: "folder-services",
-        label: "services",
-        type: "folder",
-        children: [
-          {
-            id: "file-auth-service",
-            label: "auth_service.py",
-            type: "file",
-            children: [
-              {
-                id: "class-auth-service",
-                label: "AuthService",
-                type: "class",
-                children: [
-                  {
-                    id: "func-login",
-                    label: "login()",
-                    type: "function",
-                  },
-                  {
-                    id: "func-logout",
-                    label: "logout()",
-                    type: "function",
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            id: "file-email-service",
-            label: "email_service.py",
-            type: "file",
-            children: [
-              {
-                id: "class-email-service",
-                label: "EmailService",
-                type: "class",
-                children: [
-                  {
-                    id: "func-send-email",
-                    label: "send_email()",
-                    type: "function",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-
-      // ------------------ Models ------------------
-      {
-        id: "folder-models",
-        label: "models",
-        type: "folder",
-        children: [
-          {
-            id: "file-user-model",
-            label: "user.py",
-            type: "file",
-            children: [
-              {
-                id: "class-user",
-                label: "User",
-                type: "class",
-                children: [
-                  {
-                    id: "func-save",
-                    label: "save()",
-                    type: "function",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-
-      // ------------------ Utils ------------------
-      {
-        id: "folder-utils",
-        label: "utils",
-        type: "folder",
-        children: [
-          {
-            id: "file-helper",
-            label: "helpers.py",
-            type: "file",
-            children: [
-              {
-                id: "class-helper",
-                label: "Helper",
-                type: "class",
-                children: [
-                  {
-                    id: "func-format-date",
-                    label: "format_date()",
-                    type: "function",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-
-      // ------------------ Direct Files ------------------
-      {
-        id: "file-main",
-        label: "main.py",
-        type: "file",
-        children: [
-          {
-            id: "class-main",
-            label: "MainApp",
-            type: "class",
-            children: [
-              {
-                id: "func-start",
-                label: "start()",
-                type: "function",
-              },
-            ],
-          },
-        ],
-      },
-
-      {
-        id: "file-config",
-        label: "config.py",
-        type: "file",
-        children: [
-          {
-            id: "class-config",
-            label: "Config",
-            type: "class",
-            children: [
-              {
-                id: "func-load-config",
-                label: "load_config()",
-                type: "function",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-];
-
-
+// SAFE VISIBILITY MAP
 const generateVisibilityMap = (data) => {
   const map = {};
 
-  const traverse = (items) => {
-    items.forEach((item) => {
-      map[item.id] = true;
-      if (item.children) traverse(item.children);
-    });
+  const traverse = (item, path = "") => {
+    if (!item) return;
+
+    // Unique ID generate (since no id field exists)
+    const id = path ? `${path}/${item.name}` : item.name;
+
+    map[id] = true;
+
+    if (Array.isArray(item.children) && item.children.length > 0) {
+      item.children.forEach((child) => traverse(child, id));
+    }
   };
 
-  traverse(data);
+  // Handle both array & object root safely
+  if (Array.isArray(data)) {
+    data.forEach((item) => traverse(item));
+  } else {
+    traverse(data);
+  }
+
   return map;
 };
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [repoData, setRepoData] = useState(initialRepoData);
-
   const [visibleNodes, setVisibleNodes] = useState(
     generateVisibilityMap(initialRepoData)
   );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+
+  // ANALYZE METHOD
+  const onAnalyze = async (githubPath) => {
+    if (!githubPath) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/analyze",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ repoUrl: githubPath }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("API error");
+      }
+
+      const data = await response.json();
+
+      // Update repo data safely
+      setRepoData(data);
+      setVisibleNodes(generateVisibilityMap(data));
+
+    } catch (error) {
+      console.log("Error ::", error);
+      setError("Unable to analyze this repository.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
-      <Header onMenuClick={() => setSidebarOpen(true)} />
+      <Header
+        onMenuClick={() => setSidebarOpen(true)}
+        onAnalyze={onAnalyze}
+        loading={loading}
+      />
+
+      {error && (
+        <div className="bg-red-100 text-red-600 px-4 py-2 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden relative">
         {sidebarOpen && (

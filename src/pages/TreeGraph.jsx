@@ -1,35 +1,40 @@
 import React from "react";
 
 const TreeGraph = ({ data }) => {
+
   const renderNode = (node) => {
+    const id = node.id || node.name; // fallback id
+    const label = node.label || node.name;
+
     return (
-      <li key={node.id} className="relative flex flex-col items-center">
+      <li key={id} className="relative flex flex-col items-center">
         
         {/* Node Box */}
         <div className="px-4 py-2 bg-amber-300 rounded-md text-sm font-medium shadow whitespace-nowrap">
-          {node.label}
+          {label}
         </div>
 
-        {/* Children */}
-        {node.children && node.children.length > 0 && (
+        {/* Children Section */}
+        {Array.isArray(node.children) && node.children.length > 0 && (
           <>
             {/* Vertical Line */}
             <div className="w-px h-6 bg-gray-400"></div>
 
-            {/* Children Container */}
-            <ul className="flex gap-8 relative pt-6">
+            <ul className="flex justify-center gap-8 relative pt-6">
               
               {/* Horizontal Line */}
-              <div className="absolute top-0 left-0 right-0 h-px bg-gray-400"></div>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gray-400"></div>
 
               {node.children.map((child) => (
-                <li key={child.id} className="flex flex-col items-center relative">
-                  
-                  {/* Vertical Line */}
-                  <div className="w-px h-6 bg-gray-400"></div>
+                <div
+                  key={child.id || child.name}
+                  className="relative flex flex-col items-center"
+                >
+                  {/* Vertical line */}
+                  <div className="w-px h-6 bg-gray-400 absolute -top-6"></div>
 
                   {renderNode(child)}
-                </li>
+                </div>
               ))}
             </ul>
           </>
@@ -38,12 +43,14 @@ const TreeGraph = ({ data }) => {
     );
   };
 
+  // ✅ SAFE ROOT HANDLING
+  const safeData = Array.isArray(data) ? data : [data];
+
   return (
     <div className="w-full overflow-x-auto">
-      {/* Important Wrapper */}
       <div className="min-w-max px-10 py-8">
-        <ul className="flex">
-          {data.map((node) => renderNode(node))}
+        <ul className="flex justify-center">
+          {safeData.map((node) => renderNode(node))}
         </ul>
       </div>
     </div>

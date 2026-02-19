@@ -6,6 +6,12 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
+
+// ✅ Stable references (outside component)
+const nodeTypes = {};
+const edgeTypes = {};
+
+
 const getNodeStyle = (level) => {
   const colors = [
     "bg-sky-400",
@@ -26,20 +32,29 @@ const getNodeStyle = (level) => {
   `;
 };
 
+
 const generateFlow = (data, visibleNodes) => {
   const nodes = [];
   const edges = [];
 
   const traverse = (items, parent = null, level = 0, y = { value: 0 }) => {
-    items.forEach((item) => {
-      if (!visibleNodes[item.id]) return;
+    if (!items) return;
+
+    // ✅ Make safe array
+    const safeItems = Array.isArray(items) ? items : [items];
+
+    safeItems.forEach((item) => {
+      const id = item.id || item.name; // fallback id
+      const label = item.label || item.name;
+
+      if (!visibleNodes?.[id]) return;
 
       nodes.push({
-        id: item.id,
+        id: id,
         data: {
           label: (
             <div className={getNodeStyle(level)}>
-              {item.label}
+              {label}
             </div>
           ),
         },
@@ -49,9 +64,9 @@ const generateFlow = (data, visibleNodes) => {
 
       if (parent) {
         edges.push({
-          id: `${parent}-${item.id}`,
+          id: `${parent}-${id}`,
           source: parent,
-          target: item.id,
+          target: id,
           type: "smoothstep",
           animated: false,
           style: {
@@ -62,8 +77,8 @@ const generateFlow = (data, visibleNodes) => {
 
       y.value++;
 
-      if (item.children) {
-        traverse(item.children, item.id, level + 1, y);
+      if (Array.isArray(item.children) && item.children.length > 0) {
+        traverse(item.children, id, level + 1, y);
       }
     });
   };
@@ -72,6 +87,8 @@ const generateFlow = (data, visibleNodes) => {
 
   return { nodes, edges };
 };
+
+
 
 export default function VerticalGraph({ data, visibleNodes }) {
   const { nodes, edges } = useMemo(
@@ -84,6 +101,8 @@ export default function VerticalGraph({ data, visibleNodes }) {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}    
+        edgeTypes={edgeTypes}      
         fitView
         className="rounded-xl"
       >
