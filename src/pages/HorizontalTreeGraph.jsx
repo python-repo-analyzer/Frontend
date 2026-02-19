@@ -1,115 +1,167 @@
-import React, { useMemo } from "react";
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-} from "reactflow";
-import "reactflow/dist/style.css";
+import React, { useState } from "react";
 
+const branchColors = [
+  "from-sky-400 to-sky-600",
+  "from-indigo-400 to-indigo-600",
+  "from-purple-400 to-purple-600",
+  "from-pink-400 to-pink-600",
+  "from-red-400 to-red-600",
+];
 
-// ✅ Stable references (outside component)
-const nodeTypes = {};
-const edgeTypes = {};
+const strokeColors = [
+  "#38bdf8",
+  "#6366f1",
+  "#a855f7",
+  "#ec4899",
+  "#ef4444",
+];
 
+const NODE_SIZE = 70;
+const HORIZONTAL_GAP = 200;
+const VERTICAL_GAP = 90;
 
-const getNodeStyle = (level) => {
-  const colors = [
-    "bg-sky-400",
-    "bg-indigo-400",
-    "bg-purple-400",
-    "bg-pink-400",
-    "bg-red-400",
-  ];
+const Node = ({ node, level = 0, branchIndex = 0 }) => {
+  const [open, setOpen] = useState(true);
+  const hasChildren = node.children?.length > 0;
 
-  return `
-    ${colors[level % colors.length]}
-    text-white
-    rounded-full
-    px-4 py-2
-    text-sm
-    font-semibold
-    shadow-md
-  `;
+  const gradient =
+    branchColors[level === 0 ? 0 : branchIndex + 1] ||
+    "from-gray-400 to-gray-600";
+
+  const stroke =
+    strokeColors[level === 0 ? 0 : branchIndex + 1] || "#64748b";
+
+  return (
+    <div className="flex items-center">
+      
+      {/* Node */}
+      <div
+        onClick={() => hasChildren && setOpen(!open)}
+        className={`
+          w-17.5 h-17.5 rounded-full
+          bg-linear-to-br ${gradient}
+          text-white flex items-center justify-center
+          font-semibold text-sm
+          shadow-xl shadow-black/20
+          border-4 border-white/80
+          backdrop-blur-md
+          transition-all duration-300
+          hover:scale-110 hover:shadow-2xl
+          ${hasChildren ? "cursor-pointer" : ""}
+        `}
+      >
+        {node.name}
+      </div>
+
+      {/* Children */}
+      {hasChildren && open && (
+        <div
+          className="relative flex flex-col"
+          style={{
+            marginLeft: HORIZONTAL_GAP,
+            gap: VERTICAL_GAP,
+          }}
+        >
+          {node.children.map((child, i) => (
+            <div key={i} className="relative flex items-center">
+              
+              {/* Connector */}
+              <svg
+                width={HORIZONTAL_GAP}
+                height={NODE_SIZE}
+                className="absolute"
+                style={{
+                  left: -HORIZONTAL_GAP,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                }}
+              >
+                <path
+                  d={`M${HORIZONTAL_GAP} ${NODE_SIZE / 2}
+                     C ${HORIZONTAL_GAP / 2} ${NODE_SIZE / 2},
+                       ${HORIZONTAL_GAP / 2} ${NODE_SIZE / 2},
+                       0 ${NODE_SIZE / 2}`}
+                  stroke={stroke}
+                  strokeWidth="2.5"
+                  fill="none"
+                />
+              </svg>
+
+              <Node
+                node={child}
+                level={level + 1}
+                branchIndex={level === 0 ? i : branchIndex}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
+const HorizontalTreeGraph = ({ data }) => {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [start, setStart] = useState({ x: 0, y: 0 });
 
-const generateFlow = (data, visibleNodes) => {
-  const nodes = [];
-  const edges = [];
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const zoomAmount = -e.deltaY * 0.001;
+    setScale((prev) => Math.min(Math.max(prev + zoomAmount, 0.5), 2));
+  };
 
-  const traverse = (items, parent = null, level = 0, y = { value: 0 }) => {
-    if (!items) return;
+  const handleMouseDown = (e) => {
+    setDragging(true);
+    setStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
 
-    // ✅ Make safe array
-    const safeItems = Array.isArray(items) ? items : [items];
-
-    safeItems.forEach((item) => {
-      const id = item.id || item.name; // fallback id
-      const label = item.label || item.name;
-
-      if (!visibleNodes?.[id]) return;
-
-      nodes.push({
-        id: id,
-        data: {
-          label: (
-            <div className={getNodeStyle(level)}>
-              {label}
-            </div>
-          ),
-        },
-        position: { x: level * 250, y: y.value * 120 },
-        type: "default",
-      });
-
-      if (parent) {
-        edges.push({
-          id: `${parent}-${id}`,
-          source: parent,
-          target: id,
-          type: "smoothstep",
-          animated: false,
-          style: {
-            strokeWidth: 2,
-          },
-        });
-      }
-
-      y.value++;
-
-      if (Array.isArray(item.children) && item.children.length > 0) {
-        traverse(item.children, id, level + 1, y);
-      }
+  const handleMouseMove = (e) => {
+    if (!dragging) return;
+    setPosition({
+      x: e.clientX - start.x,
+      y: e.clientY - start.y,
     });
   };
 
-  traverse(data);
-
-  return { nodes, edges };
-};
-
-
-
-export default function HorizontalTreeGraph({ data, visibleNodes }) {
-  const { nodes, edges } = useMemo(
-    () => generateFlow(data, visibleNodes),
-    [data, visibleNodes]
-  );
+  const handleMouseUp = () => setDragging(false);
 
   return (
-    <div className="h-[70vh] w-full bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}    
-        edgeTypes={edgeTypes}      
-        fitView
-        className="rounded-xl"
+    <div
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      className="h-screen overflow-hidden relative bg-linear-to-r from-slate-50 to-slate-200 cursor-grab active:cursor-grabbing"
+    >
+      {/* Zoom Controls */}
+      <div className="absolute right-6 top-6 flex flex-col gap-3 z-10">
+        <button
+          onClick={() => setScale((s) => Math.min(s + 0.1, 2))}
+          className="w-12 h-12 rounded-full bg-slate-900 text-white text-xl shadow-lg hover:scale-110 transition"
+        >
+          +
+        </button>
+        <button
+          onClick={() => setScale((s) => Math.max(s - 0.1, 0.5))}
+          className="w-12 h-12 rounded-full bg-slate-900 text-white text-xl shadow-lg hover:scale-110 transition"
+        >
+          −
+        </button>
+      </div>
+
+      <div
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transformOrigin: "0 0",
+        }}
+        className="p-40"
       >
-        <Background gap={20} size={1} />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
+        <Node node={data} />
+      </div>
     </div>
   );
-}
+};
+
+export default HorizontalTreeGraph;
