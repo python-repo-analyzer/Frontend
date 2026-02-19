@@ -1,6 +1,6 @@
 import React from "react";
 
-const TreeGraph = ({ data }) => {
+const VerticleTreeGraph = ({ data }) => {
 
   const renderNode = (node) => {
     const id = node.id || node.name; // fallback id
@@ -57,4 +57,4 @@ const TreeGraph = ({ data }) => {
   );
 };
 
-export default TreeGraph;
+export default VerticleTreeGraph;

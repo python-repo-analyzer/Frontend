@@ -1,5 +1,5 @@
 import { X, GitBranch, Settings, FolderTree } from "lucide-react";
-import HorizontalTree from "../../pages/HorizontalTree.jsx";
+import HorizontalTree from "./HorizontalTree.jsx";
 
 export default function Sidebar({
   closeSidebar,

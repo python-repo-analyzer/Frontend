@@ -90,7 +90,7 @@ const generateFlow = (data, visibleNodes) => {
 
 
 
-export default function VerticalGraph({ data, visibleNodes }) {
+export default function HorizontalTreeGraph({ data, visibleNodes }) {
   const { nodes, edges } = useMemo(
     () => generateFlow(data, visibleNodes),
     [data, visibleNodes]

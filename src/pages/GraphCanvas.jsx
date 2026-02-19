@@ -1,8 +1,31 @@
-import React from "react";
-import VerticalGraph from "./VerticalGraph.jsx";
-import TreeGraph from "./TreeGraph.jsx";
+import React, { useState } from "react";
+import VerticleTreeGraph from "./VerticaleTreeGraph.jsx";
+import HorizontalTreeGraph from "./HorizontalTreeGraph.jsx";
 
-const GraphCanvas = ({ repoData, visibleNodes }) => {
+const GraphCanvas = ({ repoData }) => {
+
+  // Get all node ids initially ON
+  const getAllNodeIds = (items, acc = {}) => {
+    if (!items) return acc;
+
+    const safeItems = Array.isArray(items) ? items : [items];
+
+    safeItems.forEach((item) => {
+      const id = item.id || item.name;
+      acc[id] = true;
+
+      if (item.children) {
+        getAllNodeIds(item.children, acc);
+      }
+    });
+
+    return acc;
+  };
+
+  const [visibleNodes, setVisibleNodes] = useState(() =>
+    getAllNodeIds(repoData)
+  );
+
   return (
     <div className="min-h-screen w-full bg-gray-100 p-4 md:p-8">
       {/* Header */}
@@ -15,19 +38,25 @@ const GraphCanvas = ({ repoData, visibleNodes }) => {
         </p>
       </div>
 
-      {/* Responsive Layout */}
       <div className="w-full min-h-screen bg-gray-100 px-4 md:px-8 py-8 space-y-8">
+        
         {/* Top Panel - Toggle Tree */}
         <div className="w-full bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">
-              🌳 Toggle Tree
+              🌳 Vertical Graph Tree
             </h2>
-            <span className="text-sm text-gray-500">Control visibility</span>
+            <span className="text-sm text-gray-500">
+              Control visibility
+            </span>
           </div>
 
           <div className="h-[70vh] overflow-auto border rounded-lg p-4 bg-gray-50">
-            <TreeGraph data={repoData} visibleNodes={visibleNodes} />
+            <VerticleTreeGraph
+              data={repoData}
+              visibleNodes={visibleNodes}
+              setVisibleNodes={setVisibleNodes}   
+            />
           </div>
         </div>
 
@@ -35,13 +64,18 @@ const GraphCanvas = ({ repoData, visibleNodes }) => {
         <div className="w-full bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">
-              📊 Structure Graph
+              📊 Horizontal Graph Tree
             </h2>
-            <span className="text-sm text-gray-500">Live Preview</span>
+            <span className="text-sm text-gray-500">
+              Live Preview
+            </span>
           </div>
 
           <div className="w-full h-auto border rounded-lg bg-gray-50">
-            <VerticalGraph data={repoData} visibleNodes={visibleNodes} />
+            <HorizontalTreeGraph
+              data={repoData}
+              visibleNodes={visibleNodes}
+            />
           </div>
         </div>
       </div>
